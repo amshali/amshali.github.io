@@ -39,10 +39,9 @@
         width: 70px;
         height: 70px;
         line-height: 70px;
-        border: 2px solid #000;
         border-radius: 10px;
         background-color: #f8f9fa;
-        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        box-shadow: 0 5px 6px rgba(0, 0, 0, 0.1);
         animation: roll-animation 0.6s linear;
       }
 
@@ -66,6 +65,7 @@
     </style>
   </head>
   <body
+    style="padding-bottom: 20px"
     class="bg-light d-flex flex-column align-items-center justify-content-center"
   >
     <div class="container">
@@ -77,9 +77,9 @@
           Add Player
         </button>
       </div>
-      <div class="dice-container">
+      <div class="dice-container border rounded-3">
         <div id="dice-display"></div>
-        <div class="mt-3">
+        <div class="mt-3 mb-3">
           <button class="btn btn-primary me-2 fs-2" onclick="rollDice(1)">
             🎲
           </button>
@@ -120,6 +120,7 @@
           setTimeout(() => {
             const result = Math.floor(Math.random() * 6) + 1;
             diceDiv.textContent = result;
+            diceDiv.classList.add("border", "border-2");
             diceResults.push(result);
           }, 600); // Simulate rolling time
         }
