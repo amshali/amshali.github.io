@@ -1,0 +1,84 @@
+.history-list {
+    display: flex;
+    overflow-x: auto;
+    white-space: nowrap;
+    padding: 0;
+    list-style-type: none;
+    padding-bottom: 10px;
+  }
+  
+  .history-list li {
+    display: inline-block;
+    margin-right: 8px;
+    padding: 5px 10px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    background-color: #f8f9fa;
+    font-size: 0.9rem;
+  }
+  
+  .dice-container {
+    text-align: center;
+    margin-top: 20px;
+  }
+  
+  .dice {
+    font-size: 4rem;
+    display: inline-block;
+    margin: 10px;
+    width: 70px;
+    height: 70px;
+    line-height: 70px;
+    border-radius: 10px;
+    background-color: #f8f9fa;
+    box-shadow: 0 5px 6px rgba(0, 0, 0, 0.1);
+  }
+  .dice-roll {
+    font-size: 4rem;
+    display: inline-block;
+    margin: 10px;
+    width: 70px;
+    height: 70px;
+    line-height: 70px;
+    animation: roll-animation 0.6s linear;
+  }
+  
+  @keyframes roll-animation {
+    0% {
+      transform: rotate(0deg);
+    }
+    25% {
+      transform: rotate(90deg);
+    }
+    50% {
+      transform: rotate(180deg);
+    }
+    75% {
+      transform: rotate(270deg);
+    }
+    100% {
+      transform: rotate(360deg);
+    }
+  }
+  
+  .highlight {
+    animation: pulse 0.5s ease-out;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+  }
+  
+  @keyframes pulse {
+    0% {
+      transform: scale(1);
+      background-color: transparent;
+    }
+    50% {
+      transform: scale(1.2);
+      background-color: rgba(255, 255, 0, 0.5); /* Yellow highlight */
+    }
+    100% {
+      transform: scale(1);
+      background-color: transparent;
+    }
+  }
+  
