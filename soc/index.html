@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Settlers of Catan Board Randomizer</title>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
+    <link
+      rel="stylesheet"
+      href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css"
+    />
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        text-align: center;
+      }
+      .board {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        margin-top: 20px;
+        position: relative;
+      }
+      .hex {
+        width: 10vw; /* Adjust size of hexagons based on viewport width */
+        height: 10vw;
+        clip-path: polygon(
+          50% 0%,
+          100% 25%,
+          100% 75%,
+          50% 100%,
+          0% 75%,
+          0% 25%
+        );
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        position: relative;
+        text-align: center;
+        padding: 5px;
+        margin: 1px;
+      }
+
+      .hex-row {
+        display: flex;
+        justify-content: center;
+        width: 100%;
+        position: relative;
+        margin: 0;
+        flex-wrap: nowrap; /* Prevent row wrapping */
+      }
+
+      @media (max-width: 600px) {
+        .hex {
+          width: 15vw; /* Adjust for smaller screens (increase size) */
+          height: 15vw;
+        }
+      }
+      .resource {
+        position: absolute;
+        top: 5px;
+        color: black;
+        font-size: 0.7rem;
+        font-weight: bold;
+        padding-top: 0.2rem;
+      }
+      .number {
+        position: absolute;
+        font-size: 1.3rem;
+        font-weight: bold;
+        padding-top: 0.8rem;
+        top: 0.5rem;
+      }
+      .number_high {
+        position: absolute;
+        font-size: 1.3rem;
+        font-weight: bold;
+        padding-top: 0.8rem;
+        top: 0.5rem;
+        color: deeppink;
+      }
+      button {
+        margin-top: 20px;
+        padding: 10px 20px;
+        font-size: 16px;
+        cursor: pointer;
+      }
+    </style>
+  </head>
+  <body>
+    <h2>Settlers of Catan Board Randomizer</h2>
+    <div class="board" id="board"></div>
+    <div class="container stats-container text-center">
+      <h6 class="mb-3">Probability Points Statistics</h6>
+      <div class="mb-2">
+        <span class="fw-bold">Mean:</span> <span id="mean-value">0.00</span>
+      </div>
+      <div class="mb-3">
+        <span class="fw-bold">Variance:</span>
+        <span id="variance-value">0.00</span>
+      </div>
+    </div>
+    <button class="btn btn-primary" onclick="generateBoard()">
+      Generate Random Board
+    </button>
+
+    <script>
+      let settlersNumbers = null;
+      $.getJSON("settlers.json", function (data) {
+        settlersNumbers = data;
+      });
+      class HexTile {
+        constructor(id) {
+          this.id = id; // Unique identifier for the tile
+          this.resource = null; // Resource type (e.g., "Wood", "Brick", "Desert")
+          this.number = null; // Number token (e.g., 2, 3, 4, ..., 12)
+          this.neighbors = []; // List of neighboring tiles
+        }
+      }
+
+      class CatanBoard {
+        constructor() {
+          this.tiles = []; // List of all hex tiles
+          this.layout = [3, 4, 5, 4, 3]; // Hexagonal grid layout
+          let tileNumber = 0;
+          this.meanVar = [];
+          const tileMap = {};
+          for (let row = 0; row < this.layout.length; row++) {
+            for (let col = 0; col < this.layout[row]; col++) {
+              const tile = new HexTile(tileNumber);
+              tileMap[`${row}-${col}`] = tile;
+              const neighbors = this.getPreNeighbors(row, col);
+              neighbors.forEach((neighbor) => {
+                if (neighbor[0] < 0 || neighbor[1] < 0) {
+                  return;
+                }
+                const neighborTile = tileMap[`${neighbor[0]}-${neighbor[1]}`];
+                if (neighborTile) {
+                  tile.neighbors.push(neighborTile);
+                }
+              });
+              tileNumber++;
+              this.tiles.push(tile);
+            }
+          }
+        }
+
+        getPreNeighbors(tileRow, tileCol) {
+          if (tileRow < 0 || tileRow >= this.layout.length) return [];
+          if (tileRow < 3) {
+            return [
+              [tileRow, tileCol - 1],
+              [tileRow - 1, tileCol - 1],
+              [tileRow - 1, tileCol],
+            ];
+          } else {
+            return [
+              [tileRow, tileCol - 1],
+              [tileRow - 1, tileCol],
+              [tileRow - 1, tileCol + 1],
+            ];
+          }
+        }
+
+        assignDiceNumbers() {
+          const numKeys = Object.keys(settlersNumbers).length;
+          // Choose a random element from `settlersNumbers`
+          const assignmentStr =
+            Object.keys(settlersNumbers)[Math.floor(Math.random() * numKeys)];
+          this.meanVar = settlersNumbers[assignmentStr];
+          const assignment = assignmentStr
+            .split(",")
+            .map((num) => parseInt(num));
+          for (let tile of this.tiles) {
+            tile.number = assignment[tile.id];
+            if (tile.number === 7) {
+              tile.resource = "Desert";
+            }
+          }
+        }
+        randomizeResources() {
+          const resourceCounts = {
+            Wood: 4,
+            Brick: 3,
+            Sheep: 4,
+            Wheat: 4,
+            Ore: 3,
+            Desert: 0, // We force assign this because we assign the numbers first
+          };
+
+          for (let tile of this.tiles) {
+            if (tile.resource === "Desert") {
+              continue;
+            }
+            const availableResources = Object.keys(resourceCounts).filter(
+              (resource) => resourceCounts[resource] > 0
+            );
+            // sort availableResources by the resource count desc
+            availableResources.sort((a, b) => {
+              return resourceCounts[b] - resourceCounts[a];
+            });
+            const availableResourcesWithoutNeighbor = availableResources.filter(
+              (resource) =>
+                !tile.neighbors.some((neighborTile) => {
+                  return neighborTile && neighborTile.resource === resource;
+                })
+            );
+            let randomResource = null;
+            if (availableResourcesWithoutNeighbor.length > 0) {
+              randomResource =
+                Math.random() < 0.5
+                  ? availableResourcesWithoutNeighbor[0]
+                  : availableResourcesWithoutNeighbor[
+                      Math.floor(
+                        Math.random() * availableResourcesWithoutNeighbor.length
+                      )
+                    ];
+            } else {
+              randomResource =
+                Math.random() < 0.5
+                  ? availableResources[0]
+                  : availableResources[
+                      Math.floor(Math.random() * availableResources.length)
+                    ];
+            }
+            resourceCounts[randomResource]--;
+            tile.resource = randomResource;
+          }
+        }
+      }
+
+      // Function to generate a random board
+      function generateBoard() {
+        const catanBoard = new CatanBoard();
+        catanBoard.assignDiceNumbers();
+        catanBoard.randomizeResources();
+        let board = document.getElementById("board");
+        board.innerHTML = ""; // Clear the board
+
+        // Define the layout of rows and columns for the hexagonal grid
+        const rows = [3, 4, 5, 4, 3];
+
+        // Color mapping for each resource
+        const resourceColors = {
+          Wheat: "yellow",
+          Ore: "darkgray",
+          Sheep: "lightgreen",
+          Brick: "brown",
+          Wood: "green",
+          Desert: "orange", // You can choose any color for Desert
+        };
+        document.getElementById("mean-value").innerText =
+          catanBoard.meanVar[0].toFixed(2);
+        document.getElementById("variance-value").innerText =
+          catanBoard.meanVar[1].toFixed(2);
+        // Loop over each row and create hex tiles
+        let tileNumber = 0;
+        for (let rowIndex = 0; rowIndex < rows.length; rowIndex++) {
+          const tileCount = rows[rowIndex];
+          const hexRow = document.createElement("div");
+          hexRow.className = "hex-row";
+
+          // Create hexagons for this row
+          for (let hexInRow = 0; hexInRow < tileCount; hexInRow++) {
+            const hexTile = document.createElement("div");
+            hexTile.className = "hex";
+
+            // Add resource to hex
+            const resource = catanBoard.tiles[tileNumber].resource;
+            const resourceElement = document.createElement("div");
+            resourceElement.classList.add("resource");
+            resourceElement.innerText = resource;
+            hexTile.appendChild(resourceElement);
+
+            // Set background color based on resource
+            hexTile.style.backgroundColor = resourceColors[resource];
+
+            // Add number to hex (for non-desert tiles)
+            if (resource !== "Desert") {
+              const numberElement = document.createElement("div");
+              if (
+                catanBoard.tiles[tileNumber].number == 6 ||
+                catanBoard.tiles[tileNumber].number == 8
+              ) {
+                numberElement.className = "number_high";
+              } else {
+                numberElement.className = "number";
+              }
+              numberElement.innerText = catanBoard.tiles[tileNumber].number;
+              hexTile.appendChild(numberElement);
+            }
+
+            // Append hex to row
+            hexRow.appendChild(hexTile);
+            tileNumber++;
+          }
+
+          // Append row to the board
+          board.appendChild(hexRow);
+        }
+      }
+    </script>
+  </body>
+</html>
