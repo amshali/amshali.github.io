@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Poem</title>
+    <style>
+        /*
+          PART 1: Define the custom font using @font-face
+          Make sure the 'src' path matches where your font file is saved
+        */
+        @font-face {
+            font-family: 'IranNastaliq'; /* Choose any name you like for your font */
+            src: url('fonts/IranNastaliq.ttf') format('truetype'); /* Include multiple formats for compatibility */
+            font-weight: normal;
+            font-style: normal;
+        }
+
+        /*
+          PART 2: Apply the custom font to HTML elements
+        */
+        body {
+            font-family: sans-serif; /* Fallback font */
+            padding: 20px;
+        }
+
+        h1 {
+            font-family: 'IranNastaliq', Arial, sans-serif;
+            color: #333;
+        }
+
+        p {
+            font-family: 'IranNastaliq', serif;
+            font-size: 2em;
+            color: #666;
+        }
+
+        /* NEW STYLES for the poem */
+        .poem-container {
+            /* Center the text for Nastaliq, which often looks better centered */
+            text-align: center;
+            margin-top: 30px;
+            border: 1px solid #eee; /* Optional border for visual separation */
+            padding: 20px;
+            max-width: 600px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+    </style>
+</head>
+<body>
+    <div class="poem-container">
+        <p dir="rtl">
+ای ساکن جان من آخر به کجا رفتی<br>
+در خانه نهان گشتی یا سوی هوا رفتی<br><br>
+
+چون عهد دلم دیدی از عهد بگردیدی<br>
+چون مرغ بپریدی ای دوست کجا رفتی<br><br>
+
+در روح نظر کردی چون روح سفر کردی<br>
+از خلق حذر کردی وز خلق جدا رفتی<br><br>
+
+رفتی تو بدین زودی تو باد صبا بودی<br>
+مانندهٔ بوی گل با باد صبا رفتی<br><br>
+
+نی باد صبا بودی نی مرغ هوا بودی<br>
+از نور خدا بودی در نور خدا رفتی<br><br>
+
+ای خواجه این خانه چون شمع در این خانه<br>
+وز ننگ چنین خانه بر سقف سما رفتی
+        </p>
+    </div>
+</body>
+</html>
