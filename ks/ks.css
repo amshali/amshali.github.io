@@ -17,6 +17,20 @@
   font-size: 0.9rem;
 }
 
+.history-list:empty {
+  display: none;
+}
+
+/* Make history scrollbar look nicer */
+.history-list::-webkit-scrollbar {
+  height: 4px;
+}
+
+.history-list::-webkit-scrollbar-thumb {
+  background: #ccc;
+  border-radius: 10px;
+}
+
 .dice-container {
   text-align: center;
   margin-top: 20px;
