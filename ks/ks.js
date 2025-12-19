@@ -21,6 +21,34 @@ export class PlayerManager {
     this.playerTimeouts = {};
   }
 
+  resetAllScores() {
+    if (confirm("Are you sure you want to reset scores for ALL players?")) {
+      Object.keys(this.players).forEach(id => {
+        this.players[id].score = 0;
+        this.players[id].history = [];
+        
+        // Update UI if player card exists
+        const scoreSpan = document.getElementById(`score-${id}`);
+        if (scoreSpan) scoreSpan.textContent = "0";
+        this.updateHistory(id);
+      });
+      this.saveScores();
+    }
+  }
+
+  resetScore(playerId) {
+    if (confirm(`Reset score for ${this.players[playerId].name}?`)) {
+      this.players[playerId].score = 0;
+      this.players[playerId].history = [];
+      
+      const scoreSpan = document.getElementById(`score-${playerId}`);
+      if (scoreSpan) scoreSpan.textContent = "0";
+      
+      this.updateHistory(playerId);
+      this.saveScores();
+    }
+  }
+
   saveScores() {
     localStorage.setItem("players", JSON.stringify(this.players));
   }
@@ -73,7 +101,6 @@ export class PlayerManager {
     }
 
     const playerList = document.getElementById("player-list");
-
     const playerDiv = document.createElement("div");
     playerDiv.className = "bg-white border rounded p-3 mb-3 shadow-sm player";
     playerDiv.id = `player-${id}`;
@@ -95,9 +122,14 @@ export class PlayerManager {
         <div id="history-${id}" class="history mt-3">
           <ul class="history-list" id="history-list-${id}"></ul>
         </div>
-        <button class="btn btn-danger btn-m" onclick="playerManager.removePlayer('${id}')">
+        <div class="d-flex justify-content-end gap-2">
+            <button class="btn btn-warning btn-m" onclick="playerManager.resetScore('${id}')" title="Reset Score">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#000000" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 2v6h6M2.5 8a10 10 0 1 1 2.36 5.06"/></svg>
+            </button>
+            <button class="btn btn-danger btn-m" onclick="playerManager.removePlayer('${id}')">
                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
-        </button>
+            </button>
+        </div>
     `;
     playerList.appendChild(playerDiv);
 
