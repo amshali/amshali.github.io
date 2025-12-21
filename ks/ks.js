@@ -113,10 +113,8 @@ export class PlayerManager {
         <div class="d-flex justify-content-between mt-2 align-items-center">
             <div class="font-monospace btn-group me-2" role="group">
                 <button class="border-2 btn btn-outline-danger shadow btn-sm" onclick="playerManager.changeScore('${id}', -10)">-10</button>
-                <button class="border-2 btn btn-outline-danger shadow btn-sm" onclick="playerManager.changeScore('${id}', -5)">-5</button>
                 <button class="border-2 btn btn-outline-danger shadow btn-sm" onclick="playerManager.changeScore('${id}', -1)">-1</button>
                 <button class="border-2 btn btn-outline-success shadow btn-sm" onclick="playerManager.changeScore('${id}', 1)">+1</button>
-                <button class="border-2 btn btn-outline-success shadow btn-sm" onclick="playerManager.changeScore('${id}', 5)">+5</button>
                 <button class="border-2 btn btn-outline-success shadow btn-sm" onclick="playerManager.changeScore('${id}', 10)">+10</button>
             </div>
             <span class="delta-score fw-bold text-muted fs-6" style="min-width: 35px; text-align: center;"></span>
