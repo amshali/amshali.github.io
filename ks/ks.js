@@ -23,7 +23,7 @@ export class PlayerManager {
 
   resetAllScores() {
     if (confirm("Are you sure you want to reset scores for ALL players?")) {
-      Object.keys(this.players).forEach(id => {
+      Object.keys(this.players).forEach((id) => {
         this.players[id].score = 0;
         this.players[id].history = [];
 
@@ -108,25 +108,27 @@ export class PlayerManager {
     playerDiv.innerHTML = `
         <div class="d-flex align-items-center justify-content-between">
             <span class="font-monospace fw-bold fs-5">${name}</span>
+            <span class="delta-score fw-bold text-muted fs-6" style="min-width: 35px; text-align: center;"></span>
             <span id="score-${id}" class="font-monospace badge bg-primary fs-5">${score}</span>
         </div>
         <div class="d-flex justify-content-between mt-2 align-items-center">
             <div class="font-monospace btn-group me-2" role="group">
-                <button class="border-2 btn btn-outline-danger shadow btn-sm" onclick="playerManager.changeScore('${id}', -10)">-10</button>
-                <button class="border-2 btn btn-outline-danger shadow btn-sm" onclick="playerManager.changeScore('${id}', -1)">-1</button>
-                <button class="border-2 btn btn-outline-success shadow btn-sm" onclick="playerManager.changeScore('${id}', 1)">+1</button>
-                <button class="border-2 btn btn-outline-success shadow btn-sm" onclick="playerManager.changeScore('${id}', 10)">+10</button>
+                <button class="border-2 btn btn-outline-danger shadow btn-sm p-2" onclick="playerManager.changeScore('${id}', -10)">-10</button>
+                <button class="border-2 btn btn-outline-danger shadow btn-sm p-2" onclick="playerManager.changeScore('${id}', -5)">-5</button>
+                <button class="border-2 btn btn-outline-danger shadow btn-sm p-2" onclick="playerManager.changeScore('${id}', -1)">-1</button>
+                <button class="border-2 btn btn-outline-success shadow btn-sm p-2" onclick="playerManager.changeScore('${id}', 1)">+1</button>
+                <button class="border-2 btn btn-outline-success shadow btn-sm p-2" onclick="playerManager.changeScore('${id}', 5)">+5</button>
+                <button class="border-2 btn btn-outline-success shadow btn-sm p-2" onclick="playerManager.changeScore('${id}', 10)">+10</button>
             </div>
-            <span class="delta-score fw-bold text-muted fs-6" style="min-width: 35px; text-align: center;"></span>
         </div>
         <div id="history-${id}" class="history mt-3">
           <ul class="history-list" id="history-list-${id}"></ul>
         </div>
         <div class="d-flex justify-content-end gap-2 mt-2">
-            <button class="btn btn-sm btn-outline-warning d-flex align-items-center justify-content-center" style="width: 32px; height: 32px;" onclick="playerManager.resetScore('${id}')" title="Reset Score">
+            <button class="btn btn-sm btn-outline-warning d-flex align-items-center justify-content-center" style="width: 38px; height: 38px;" onclick="playerManager.resetScore('${id}')" title="Reset Score">
                 <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 4v7h6M2.5 11a7 7 0 1 1 2.36 5.06"/></svg>
             </button>
-            <button class="btn btn-sm btn-outline-danger" onclick="playerManager.removePlayer('${id}')">
+            <button class="btn btn-sm btn-outline-danger" style="width: 38px; height: 38px;" onclick="playerManager.removePlayer('${id}')">
                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
             </button>
         </div>
@@ -200,8 +202,9 @@ export class PlayerManager {
 
     for (let i = history.length - 1; i >= 0; i--) {
       const li = document.createElement("li");
-      li.textContent = `${(history[i].delta > 0 ? "+" : "") + history[i].delta
-        }`;
+      li.textContent = `${
+        (history[i].delta > 0 ? "+" : "") + history[i].delta
+      }`;
       historyList.appendChild(li);
     }
   }
@@ -218,7 +221,7 @@ export class PlayerManager {
   }
 
   addPlayer() {
-    const playerName = prompt("Enter player's name:");
+    const playerName = prompt("Enter player's name (max 25 characters): ");
     if (playerName == null) {
       return;
     }
