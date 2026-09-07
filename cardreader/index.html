@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Perspective-Corrected PDF417 Reader</title>
+
+  <!-- Load ZXing Barcode Library -->
+  <script type="text/javascript" src="https://unpkg.com/@zxing/library@latest"></script>
+
+  <!-- Load Official Standalone OpenCV.js (Build 4.8.0) -->
+  <script async src="https://docs.opencv.org/4.8.0/opencv.js" type="text/javascript"></script>
+
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      max-width: 650px;
+      margin: 2rem auto;
+      padding: 0 1rem;
+    }
+
+    .card {
+      border: 1px solid #ccc;
+      padding: 1.5rem;
+      border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+
+    .preview-container {
+      display: flex;
+      gap: 10px;
+      margin-top: 1rem;
+      flex-wrap: wrap;
+    }
+
+    .preview-box {
+      flex: 1;
+      min-width: 200px;
+    }
+
+    .preview-box img,
+    .preview-box canvas {
+      width: 100%;
+      height: auto;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+    }
+
+    .form-group {
+      margin-bottom: 1rem;
+    }
+
+    .form-row {
+      display: flex;
+      gap: 10px;
+    }
+
+    .form-row .form-group {
+      flex: 1;
+    }
+
+    label {
+      display: block;
+      font-weight: bold;
+      margin-bottom: 0.25rem;
+    }
+
+    input[type="text"] {
+      width: 100%;
+      padding: 0.5rem;
+      box-sizing: border-box;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+    }
+
+    #status {
+      font-weight: bold;
+      color: #0066cc;
+      margin: 1rem 0;
+    }
+  </style>
+</head>
+
+<body>
+
+  <div class="card">
+    <h2>OpenCV Deskew & PDF417 Reader</h2>
+    <p>Upload a skewed photo of the back of an ID card.</p>
+
+    <input type="file" id="imageInput" accept="image/*" disabled />
+    <div id="status">Loading OpenCV.js library...</div>
+
+    <div class="preview-container">
+      <div class="preview-box">
+        <label>Original Image</label>
+        <img id="imageSrc" alt="Source Image" style="display:none;" />
+      </div>
+      <div class="preview-box">
+        <label>Deskewed & Cropped Card</label>
+        <canvas id="canvasWarped"></canvas>
+      </div>
+    </div>
+
+    <hr style="margin: 1.5rem 0; border: none; border-top: 1px solid #eee;" />
+
+    <h3>Extracted AAMVA Form Fields</h3>
+    <form id="licenseForm">
+      <div class="form-group">
+        <label for="firstName">First Name</label>
+        <input type="text" id="firstName" placeholder="Auto-filled..." />
+      </div>
+      <div class="form-group">
+        <label for="lastName">Last Name</label>
+        <input type="text" id="lastName" placeholder="Auto-filled..." />
+      </div>
+      <div class="form-group">
+        <label for="dlNumber">License Number</label>
+        <input type="text" id="dlNumber" placeholder="Auto-filled..." />
+      </div>
+      <div class="form-group">
+        <label for="dob">Date of Birth</label>
+        <input type="text" id="dob" placeholder="MM/DD/YYYY" />
+      </div>
+
+      <!-- Address Fields -->
+      <div class="form-group">
+        <label for="streetAddress">Street Address</label>
+        <input type="text" id="streetAddress" placeholder="Auto-filled..." />
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label for="city">City</label>
+          <input type="text" id="city" placeholder="Auto-filled..." />
+        </div>
+        <div class="form-group" style="flex: 0.5;">
+          <label for="state">State</label>
+          <input type="text" id="state" placeholder="WA" />
+        </div>
+        <div class="form-group">
+          <label for="zipCode">Zip Code</label>
+          <input type="text" id="zipCode" placeholder="Auto-filled..." />
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label for="rawText">Raw Decoded Barcode Payload</label>
+        <textarea id="rawText" rows="5" style="width: 100%; padding: 0.5rem;" readonly></textarea>
+      </div>
+    </form>
+  </div>
+
+  <script>
+    let cvReady = false;
+
+    function waitForOpenCV() {
+      const statusEl = document.getElementById('status');
+      const interval = setInterval(() => {
+        if (typeof cv !== 'undefined' && cv.Mat && typeof cv.Mat === 'function') {
+          clearInterval(interval);
+          cvReady = true;
+          statusEl.innerText = 'Ready! Choose an ID image.';
+          document.getElementById('imageInput').disabled = false;
+        }
+      }, 100);
+    }
+
+    window.addEventListener('load', waitForOpenCV);
+
+    document.getElementById('imageInput').addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+
+      const imgElement = document.getElementById('imageSrc');
+      imgElement.src = URL.createObjectURL(file);
+
+      imgElement.onload = async () => {
+        document.getElementById('status').innerText = 'Detecting card contours & deskewing...';
+
+        setTimeout(async () => {
+          try {
+            // 1. Perspective Transform via OpenCV
+            const deskewedCanvas = processAndDeskew('imageSrc', 'canvasWarped');
+
+            document.getElementById('status').innerText = 'Deskew complete. Scanning PDF417 (checking orientations)...';
+
+            // 2. Decode with Multi-Angle Fallback & Contrast Boosting for Mobile
+            const decodedResult = await decodeWithRotations(deskewedCanvas);
+
+            document.getElementById('rawText').value = decodedResult.getText();
+            parseAAMVAData(decodedResult.getText());
+            document.getElementById('status').innerText = 'Barcode successfully extracted!';
+          } catch (err) {
+            console.error(err);
+            document.getElementById('status').innerText = 'Failed to decode barcode. Try taking a photo closer to the card.';
+          }
+        }, 50);
+      };
+    });
+
+    /**
+     * Tries decoding at 0°, 90°, 180°, and 270° angles to fix mobile orientation issues.
+     */
+    async function decodeWithRotations(sourceCanvas) {
+      const codeReader = new ZXing.BrowserMultiFormatReader();
+      const angles = [0, 90, 180, 270];
+
+      for (const angle of angles) {
+        const testCanvas = angle === 0 ? sourceCanvas : rotateCanvas(sourceCanvas, angle);
+
+        try {
+          const img = new Image();
+          img.src = testCanvas.toDataURL('image/png');
+          await new Promise((resolve) => { img.onload = resolve; });
+
+          return await codeReader.decodeFromImageElement(img);
+        } catch (e) {
+          // If native angle fails, continue loop to next orientation angle
+        }
+      }
+
+      throw new Error("No multiformat readers were able to detect the code across all angles.");
+    }
+
+    function rotateCanvas(sourceCanvas, degrees) {
+      const dstCanvas = document.createElement('canvas');
+      const ctx = dstCanvas.getContext('2d');
+
+      if (degrees === 90 || degrees === 270) {
+        dstCanvas.width = sourceCanvas.height;
+        dstCanvas.height = sourceCanvas.width;
+      } else {
+        dstCanvas.width = sourceCanvas.width;
+        dstCanvas.height = sourceCanvas.height;
+      }
+
+      ctx.translate(dstCanvas.width / 2, dstCanvas.height / 2);
+      ctx.rotate((degrees * Math.PI) / 180);
+      ctx.drawImage(sourceCanvas, -sourceCanvas.width / 2, -sourceCanvas.height / 2);
+
+      return dstCanvas;
+    }
+
+    /**
+     * Finds the largest 4-point contour (ID card) and applies a 4-point perspective warp.
+     */
+    function processAndDeskew(sourceImgId, outputCanvasId) {
+      if (!cvReady) throw new Error("OpenCV is not ready.");
+
+      let src = cv.imread(sourceImgId);
+
+      // Force mobile high-res camera photos down to a manageable size (~1200px)
+      let maxDim = 1200;
+      if (src.cols > maxDim || src.rows > maxDim) {
+        let k = maxDim / Math.max(src.cols, src.rows);
+        let newSize = new cv.Size(Math.round(src.cols * k), Math.round(src.rows * k));
+        cv.resize(src, src, newSize, 0, 0, cv.INTER_AREA);
+      }
+
+      let gray = new cv.Mat();
+      let blurred = new cv.Mat();
+      let edged = new cv.Mat();
+
+      cv.cvtColor(src, gray, cv.COLOR_RGBA2GRAY, 0);
+      cv.GaussianBlur(gray, blurred, new cv.Size(5, 5), 0);
+      cv.Canny(blurred, edged, 75, 200);
+
+      let contours = new cv.MatVector();
+      let hierarchy = new cv.Mat();
+      cv.findContours(edged, contours, hierarchy, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE);
+
+      let maxArea = 0;
+      let cardContour = null;
+
+      for (let i = 0; i < contours.size(); ++i) {
+        let cnt = contours.get(i);
+        let area = cv.contourArea(cnt);
+
+        if (area > 5000) {
+          let peri = cv.arcLength(cnt, true);
+          let approx = new cv.Mat();
+          cv.approxPolyDP(cnt, approx, 0.02 * peri, true);
+
+          if (approx.rows === 4 && area > maxArea) {
+            maxArea = area;
+            if (cardContour) cardContour.delete();
+            cardContour = approx;
+          } else {
+            approx.delete();
+          }
+        }
+      }
+
+      let dstCanvas = document.getElementById(outputCanvasId);
+
+      if (!cardContour) {
+        console.warn("Could not find 4 distinct corners. Returning original image.");
+        cv.imshow(outputCanvasId, src);
+        src.delete(); gray.delete(); blurred.delete(); edged.delete(); contours.delete(); hierarchy.delete();
+        return dstCanvas;
+      }
+
+      let pts = [];
+      for (let i = 0; i < 4; i++) {
+        pts.push({ x: cardContour.data32S[i * 2], y: cardContour.data32S[i * 2 + 1] });
+      }
+
+      let orderedPts = orderPoints(pts);
+
+      let widthA = Math.hypot(orderedPts[2].x - orderedPts[3].x, orderedPts[2].y - orderedPts[3].y);
+      let widthB = Math.hypot(orderedPts[1].x - orderedPts[0].x, orderedPts[1].y - orderedPts[0].y);
+      let maxWidth = Math.max(widthA, widthB);
+
+      let heightA = Math.hypot(orderedPts[1].x - orderedPts[2].x, orderedPts[1].y - orderedPts[2].y);
+      let heightB = Math.hypot(orderedPts[0].x - orderedPts[3].x, orderedPts[0].y - orderedPts[3].y);
+      let maxHeight = Math.max(heightA, heightB);
+
+      let srcTri = cv.matFromArray(4, 1, cv.CV_32FC2, [
+        orderedPts[0].x, orderedPts[0].y,
+        orderedPts[1].x, orderedPts[1].y,
+        orderedPts[2].x, orderedPts[2].y,
+        orderedPts[3].x, orderedPts[3].y
+      ]);
+
+      let dstTri = cv.matFromArray(4, 1, cv.CV_32FC2, [
+        0, 0,
+        maxWidth - 1, 0,
+        maxWidth - 1, maxHeight - 1,
+        0, maxHeight - 1
+      ]);
+
+      let M = cv.getPerspectiveTransform(srcTri, dstTri);
+      let warped = new cv.Mat();
+      let dsize = new cv.Size(maxWidth, maxHeight);
+      cv.warpPerspective(src, warped, M, dsize, cv.INTER_CUBIC, cv.BORDER_CONSTANT, new cv.Scalar());
+
+      cv.imshow(outputCanvasId, warped);
+
+      src.delete(); gray.delete(); blurred.delete(); edged.delete();
+      contours.delete(); hierarchy.delete(); cardContour.delete();
+      srcTri.delete(); dstTri.delete(); M.delete(); warped.delete();
+
+      return dstCanvas;
+    }
+
+    function orderPoints(pts) {
+      pts.sort((a, b) => a.y - b.y);
+
+      let topTwo = pts.slice(0, 2).sort((a, b) => a.x - b.x);
+      let topLeft = topTwo[0];
+      let topRight = topTwo[1];
+
+      let bottomTwo = pts.slice(2, 4).sort((a, b) => a.x - b.x);
+      let bottomLeft = bottomTwo[0];
+      let bottomRight = bottomTwo[1];
+
+      return [topLeft, topRight, bottomRight, bottomLeft];
+    }
+
+    /**
+     * AAMVA Payload Parser
+     */
+    function parseAAMVAData(payload) {
+      const getVal = (codes) => {
+        for (const code of codes) {
+          const match = payload.match(new RegExp(`${code}([^\\r\\n]+)`));
+          if (match && match[1]) return match[1].trim();
+        }
+        return '';
+      };
+
+      document.getElementById('firstName').value = getVal(['DAC', 'DCT']);
+      document.getElementById('lastName').value = getVal(['DCS', 'DAB']);
+      document.getElementById('dlNumber').value = getVal(['DAQ']);
+      document.getElementById('dob').value = formatAAMVADate(getVal(['DBB']));
+      document.getElementById('streetAddress').value = getVal(['DAG', 'DAL']);
+      document.getElementById('city').value = getVal(['DAI']);
+      document.getElementById('state').value = getVal(['DAJ']);
+
+      let rawZip = getVal(['DAK']);
+      if (rawZip.length > 5) {
+        rawZip = rawZip.substring(0, 5) + '-' + rawZip.substring(5, 9);
+      }
+      document.getElementById('zipCode').value = rawZip;
+    }
+
+    function formatAAMVADate(rawDate) {
+      if (!rawDate || rawDate.length !== 8) return rawDate;
+      if (parseInt(rawDate.substring(0, 4)) > 1900) {
+        return `${rawDate.substring(4, 6)}/${rawDate.substring(6, 8)}/${rawDate.substring(0, 4)}`;
+      }
+      return `${rawDate.substring(0, 2)}/${rawDate.substring(2, 4)}/${rawDate.substring(4, 8)}`;
+    }
+  </script>
+</body>
+
+</html>
